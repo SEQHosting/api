@@ -2,14 +2,13 @@ const router = require('express').Router();
 const User = require('mongoose').model('User');
 const { body } = require('express-validator');
 const config = require.main.require('./config');
-const { validateJWTBody, wrapRoute } = require.main.require('./util');
+const { validateJWTBody, wrapRoute, validateBody } = require.main.require('./util');
 const jwt = require('jsonwebtoken');
 router.post('/login', 
 	body('username').not().isEmpty().withMessage('Username must not be empty'),
 	body('password').not().isEmpty().withMessage('Password must not be empty'),
+  validateBody,
 	wrapRoute(async (req, res, next) => {
-		const validation = req.validate();
-		if (validation) return next(validation);
 		const user = await User.findOne({ username: req.body.username });
 		if (!user) return next({status:404, message:'No such user'});
 		if (await user.validatePassword(req.body.password)) {
@@ -21,9 +20,8 @@ router.post('/login',
 router.post('/signup', 
 	body('username').not().isEmpty().withMessage('Username must not be empty'),
 	body('password').not().isEmpty().withMessage('Password must not be empty'),
+  validateBody,
 	wrapRoute(async (req, res, next) => {
-		const validation = req.validate();
-		if (validation) return next(validation);
 		const user = new User({ username: req.body.username })
 		await user.setPassword(req.body.password);
 		await user.save();
@@ -33,9 +31,8 @@ router.post('/changePassword',
 	body('token').not().isEmpty().withMessage('Token must not be empty'),
 	body('oldPassword').not().isEmpty().withMessage('Old password must not be empty'),
 	body('newPassword').not().isEmpty().withMessage('New password must not be empty'),
+  validateBody,
 	wrapRoute(async (req, res, next) => {
-		const validation = req.validate();
-		if (validation) return next(validation);
 		jwt.verify(req.body.token, config.jwtSecret, async (err, decoded) => {
 			if (err) return next(err);
 			const jwtValidation = validateJWTBody(decoded, ['username']);
